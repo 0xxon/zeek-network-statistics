@@ -1,0 +1,5 @@
+[package]
+description = Perform regular network measurements and report results.
+tags = topk, sumstats
+script_dir = scripts
+version = main
