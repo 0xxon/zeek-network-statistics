@@ -39,5 +39,5 @@ event new_connection(c: connection)
 
 event zeek_init()
 	{
-	create_topk_measurement("ports");
+	create_topk_measurement("ports", [$topk_size=65536]);
 	}
