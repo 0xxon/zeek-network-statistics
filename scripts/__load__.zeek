@@ -1,1 +1,3 @@
-@load ./topk-dns-queries.zeek
+@load ./util
+@load ./topk-dns-queries
+@load ./topk-ports
