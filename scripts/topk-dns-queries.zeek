@@ -10,6 +10,8 @@ export {
 	type TopKInfo: record {
 		## Time at which the log record was written
 		ts: time &log &default=network_time();
+		## Key of the measurement
+		key: string &log &optional;
 		## Values of the measurement
 		values: vector of string &log;
 		## Counts of the topk-measurement
@@ -43,7 +45,10 @@ event zeek_init()
 	                  		epsilons += topk_epsilon(r$topk, s[element]);
 	                  		}
 
-	                  	Log::write(TOPK_LOG, TopKInfo($values=values, $counts=counts, $epsilons=epsilons));
+	                  	local loginfo = TopKInfo($values=values, $counts=counts, $epsilons=epsilons);
+	                  	if ( key?$str )
+	                  		loginfo$key = key$str;
+	                  	Log::write(TOPK_LOG, loginfo);
 	                  	}
 	                  ]);
     }
@@ -51,5 +56,5 @@ event zeek_init()
 event dns_request(c: connection, msg: dns_msg, query: string, qtype: count, qclass: count)
 	{
 	if ( c$id$resp_p == 53/udp && query != "" )
-		SumStats::observe("ns-dns-15min", [], [$str=query]);
+		SumStats::observe("ns-dns-15min", [$str=DNS::query_types[qtype]], [$str=query]);
 	}
