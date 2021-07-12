@@ -1,4 +1,4 @@
 @load ./util
-@load ./topk-dns-queries
-@load ./topk-ports
-@load ./topk-http-hosts
+@ifndef ( NS_NO_MEASUREMENTS )
+@load ./measurements
+@endif
