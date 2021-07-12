@@ -7,19 +7,29 @@ export {
 
 	global topk_log_policy: Log::PolicyHook;
 
-	global measurement_intervals: set[interval] = set(5mins, 15mins, 1hr, 1day);
+	option topk_measurement_intervals: set[interval] = set(5mins, 15mins, 1hr, 1day);
+
+	option topk_top = 100;
+
+	option topk_size = 1000;
+
+	option topk_unified_log = F;
+
+	option topk_separate_log = T;
 
 	type TopKSettings: record {
 		## Number of elements to return
-		top: count &default=100;
+		top: count &default=topk_top;
 		## Number of elements to keep track of
-		topk_size: count &default=1000;
+		topk_size: count &default=topk_size;
 		## If set to true, will log to a unified log with all other top-k-measurements
-		unified_log: bool &default=F;
+		unified_log: bool &default=topk_unified_log;
 		## If set to true, will log to a separate log file.
-		separate_log: bool &default=T;
+		separate_log: bool &default=topk_separate_log;
 		## If not given, the log-path will be "topk-[name]"
 		log_path: string &optional;
+		## Measurement intervals for this TopK measurement
+		measurement_intervals: set[interval] &default=copy(topk_measurement_intervals);
 	};
 
 	type TopKInfo: record {
@@ -45,6 +55,8 @@ export {
 ## topk measurements that we log into the default log
 global topk_measurement_default_log: set[string] = {};
 
+global topk_measurements: table[string] of TopKSettings;
+
 redef record Log::Filter += {
 	## Addition for NetworkStats - track which measurement to allow to pass through this filter
 	ns_measurement: string &optional;
@@ -60,6 +72,14 @@ hook topk_filter_pass_specific(rec: TopKInfo, id: Log::ID, filter: Log::Filter)
 
 function create_topk_measurement(name: string, settings: TopKSettings &default=[])
 	{
+	if ( name in topk_measurements )
+		{
+		Reporter::error("TopK measurement %s was requested to be created; measurement exists already");
+		return;
+		}
+
+	topk_measurements[name] = settings;
+
 	local make_epoch_result = function(pass_name: string, pass_intv: interval, pass_settings: TopKSettings): function(ts: time, key: SumStats::Key, result: SumStats::Result)
 		{
 		return function [pass_name, pass_intv, pass_settings] (ts: time, key: SumStats::Key, result: SumStats::Result)
@@ -87,7 +107,7 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 			};
 		};
 
-	for ( intv in measurement_intervals )
+	for ( intv in settings$measurement_intervals )
 		{
 		local r1 = SumStats::Reducer($stream=fmt("ns-%s-%s", name, intv), $apply=set(SumStats::TOPK), $topk_size=settings$topk_size);
 
@@ -119,7 +139,13 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 
 function topk_observation(name: string, key: string, value: string)
 	{
-	for ( intv in measurement_intervals )
+	if ( name !in topk_measurements )
+		{
+		Reporter::error("TopK observation for non-existing measurement %s");
+		return;
+		}
+
+	for ( intv in topk_measurements[name]$measurement_intervals )
 		{
 		SumStats::observe(fmt("ns-%s-%s", name, intv), [$str=key], [$str=value]);
 		}
