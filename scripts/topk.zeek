@@ -17,6 +17,8 @@ export {
 
 	option topk_separate_log = T;
 
+	option topk_per_interval_logs = F;
+
 	type TopKSettings: record {
 		## Number of elements to return
 		top: count &default=topk_top;
@@ -30,6 +32,10 @@ export {
 		log_path: string &optional;
 		## Measurement intervals for this TopK measurement
 		measurement_intervals: set[interval] &default=copy(topk_measurement_intervals);
+		## If set to yes, there will be separate logs for each interval. Each log
+		## will have a "-interval" added to the end of the log name. This setting
+		## only applies if ``separate_log`` is also set to true.
+		per_interval_logs: bool &default=topk_per_interval_logs;
 	};
 
 	type TopKInfo: record {
@@ -50,6 +56,8 @@ export {
 	};
 
 	global create_topk_measurement: function(name: string, settings: TopKSettings &default=[]);
+
+	global log_topk: event(rec: TopKInfo);
 }
 
 ## topk measurements that we log into the default log
@@ -107,6 +115,14 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 			};
 		};
 
+	local make_path_func = function(pass_path_name: string): function(id: Log::ID, path: string, rec: TopKInfo): string
+		{
+		return function [pass_path_name] (id: Log::ID, path: string, rec: TopKInfo): string
+			{
+			return fmt("%s-%s", pass_path_name, subst_string(cat(rec$duration), " ", ""));
+			};
+		};
+
 	for ( intv in settings$measurement_intervals )
 		{
 		local r1 = SumStats::Reducer($stream=fmt("ns-%s-%s", name, intv), $apply=set(SumStats::TOPK), $topk_size=settings$topk_size);
@@ -124,16 +140,25 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 	# Let's create a separate log filter that only allows these top-k entries through
 	if ( settings$separate_log )
 		{
-		local log_path = fmt("topk-%s", name);
-		if ( settings?$log_path )
-			log_path = settings$log_path;
-		Log::add_filter(NetworkStats::TOPK_LOG, Log::Filter(
+		local filter = Log::Filter(
 			$exclude=set("name"),
 			$name=fmt("topk_separate_%s", name),
-			$path=log_path,
 			$policy=topk_filter_pass_specific,
 			$ns_measurement=name
-		));
+		);
+
+		if ( settings?$log_path )
+			filter$path = settings$log_path;
+		else
+			filter$path = fmt("topk-%s", name);
+
+		if ( settings$per_interval_logs )
+			{
+			filter$path_func = make_path_func(filter$path);
+			delete filter$path;
+			}
+
+		Log::add_filter(NetworkStats::TOPK_LOG, filter);
 		}
 	}
 
@@ -159,7 +184,7 @@ hook default_filter_policy(rec: TopKInfo, id: Log::ID, filter: Log::Filter)
 
 event zeek_init() &priority=2
 	{
-	Log::create_stream(NetworkStats::TOPK_LOG, [$columns=TopKInfo, $policy=topk_log_policy]);
+	Log::create_stream(NetworkStats::TOPK_LOG, [$columns=TopKInfo, $policy=topk_log_policy, $ev=log_topk]);
 	Log::remove_default_filter(NetworkStats::TOPK_LOG);
 	Log::add_filter(NetworkStats::TOPK_LOG, Log::Filter($name="top_log_default_filtered", $path="ns", $policy=default_filter_policy));
 	}
