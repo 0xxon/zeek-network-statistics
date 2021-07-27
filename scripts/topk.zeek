@@ -1,22 +1,32 @@
-##! Script exposing functions to make taking measurements more convenient
+##! Script exposing functions to make taking top-k measurements more convenient.
 
 module NetworkStats;
 
 export {
 	redef enum Log::ID += { TOPK_LOG };
 
+	## Policy for the topk log stream
 	global topk_log_policy: Log::PolicyHook;
 
-	option topk_measurement_intervals: set[interval] = set(5mins, 15mins, 1hr, 1day);
+	## Default measurement intervals for top-k measurements. One measurement is taken
+	## for each interval in the set.
+	option topk_measurement_intervals: set[interval] = set(15mins, 1hr, 1day);
 
+	## Default number of results to report for top-k measurements.
 	option topk_top = 100;
 
+	## Default size of top-k elements to track for each measurement.
 	option topk_size = 1000;
 
+	## If set to true, a unified log file is created. By default it is titled
+	## ns.log.
 	option topk_unified_log = F;
 
+	## If set to true, a separate log file is created for each top-k measurement
+	## that is created. By default, the log-files are called "topk-[name of measurement].log"
 	option topk_separate_log = T;
 
+	## If set to true, a separate log file is created for each top-k measurement interval.
 	option topk_per_interval_logs = F;
 
 	type TopKSettings: record {
@@ -55,8 +65,34 @@ export {
 		epsilons: vector of count &log;
 	};
 
+	## Function for easily creating top-k measurements.
+	##
+	## This function sets up a top-k measurement using the Zeek Summary statistics framework.
+	## After setting up the measurement, observations can be submitted using the topk_observation
+	## function.
+	##
+	## A TopKSettings record can be passed to customize the settings. If no settings are changed,
+	## each topk-k measurement is logged to its own log-file in 15-minute, 1-hour and 1-day intervals.
+	##
+	## name: name of the measurement to be created
+	##
+	## settings: optional settings for this top-k measurement; if not provided, the default
+	##           measurements are used.
 	global create_topk_measurement: function(name: string, settings: TopKSettings &default=[]);
 
+	## Submit top-k observations
+	##
+	## Submit observations for measurements created with create_topk_measurement.
+	##
+	## name: name of the top-k measurement
+	##
+	## key: Key of the observation. If only one kind of observation is to be recorded, pass an
+	##      empty string.
+	##
+	## value: value of the observation.
+	global topk_observation: function(name: string, key: string, value: string);
+
+	## Event that can be handled to access the TopKInfo record as it is sent on to the logging framework.
 	global log_topk: event(rec: TopKInfo);
 }
 
