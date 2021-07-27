@@ -12,7 +12,7 @@ To give a short example, the following script will set up a top-k measurement fo
 
 Per default, the top-100 DNS hostnames are counted for the last 15 minutes, the last hour and the last day separately, and the information is logged into a dedicated log-file. All of these settings are easily changeable.
 
-```
+```zeek
 event zeek_init()
 	{
 	NetworkStats::create_topk_measurement("dns");
@@ -40,7 +40,7 @@ The resulting log-file is called `topk-dns.log` and looks like this (using a sho
 
 This repository is part of the [Zeek Package Manager](https://github.com/zeek/package-manager). It can be installed using the following command:
 
-```
+```bash
 zkg install 0xxon/zeek-network-statistics
 ```
 
@@ -98,7 +98,7 @@ We currently export two script-level functions, one for creating top-k measureme
 
 The `NetworkStats::create_topk_measurement` function creates a new measurement using the specified `name`. Optionally, a `TopKSettings` record can be passed to the function. The settings record mirrors the global settings above. The full record definition is:
 
-```
+```zeek
 type TopKSettings: record {
 	## Number of elements to return
 	top: count &default=topk_top;
