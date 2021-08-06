@@ -126,3 +126,11 @@ The `NetworkStats::topk_observation` is our equivalent of the [`SumStats::observ
 It submits one observation for the measurement specified by `name`. If several different keys are tracked, a `key` can be specified; otherwise just pass an empty string.
 
 `value` specifies the value of the measurement to be submitted.
+
+## Acknowledgements
+
+This work was supported by the US National Science Foundation under grant [OAC-1642161](https://nsf.gov/awardsearch/showAward?AWD_ID=1642161&HistoricalAwards=false).
+Any opinions, findings, and conclusions or recommendations
+expressed in this material are those of the authors or origina-
+tors, and do not necessarily reflect the views of the National
+Science Foundation.
