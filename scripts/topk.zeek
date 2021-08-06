@@ -46,6 +46,20 @@ export {
 		## will have a "-interval" added to the end of the log name. This setting
 		## only applies if ``separate_log`` is also set to true.
 		per_interval_logs: bool &default=topk_per_interval_logs;
+		## Predicate function that is called at the end of each epoch. If set, the function
+		## can cause a line to be not logged by returning false. Returning true causes
+		## the line to be logged.
+		##
+		## Passed arguments:
+		##
+		## name: name of measurement
+		## intv: interval of current measurement
+		## key: key as returned by SumStats framework
+		## result: result as returned by SumStats framework
+		## values: values to be logged; can be changed by predicate
+		## counts: vounts to be logged; can be changed by predicate
+		## epsilons: epsilons to be logged; can be changed by predicate
+		pred: function(name: string, intv: interval, ts: time, key: SumStats::Key, result: SumStats::Result, values: vector of string, counts: vector of count, epsilsons: vector of count): bool &optional;
 	};
 
 	type TopKInfo: record {
@@ -140,6 +154,14 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 				values += s[element]$str;
 				counts += topk_count(r$topk, s[element]);
 				epsilons += topk_epsilon(r$topk, s[element]);
+				}
+
+			if ( pass_settings?$pred )
+				{
+				# predicate - if false is returned we just abort.
+				local logline = pass_settings$pred(pass_name, pass_intv, ts, key, result, values, counts, epsilons);
+				if ( ! logline )
+					return;
 				}
 
 			local loginfo = TopKInfo($ts=ts, $duration=pass_intv, $name=pass_name, $values=values, $counts=counts, $epsilons=epsilons);

@@ -1,3 +1,4 @@
 *.swp
 /*.log
 tests/.btest.failed.dat
+tests/.tmp
