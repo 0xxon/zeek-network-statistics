@@ -15,19 +15,19 @@ Per default, the top-100 DNS hostnames are counted for the last 15 minutes, the 
 ```zeek
 event zeek_init()
 	{
-	NetworkStats::create_topk_measurement("dns");
+	NetworkStats::create_topk_measurement("dns-queries");
 	}
 
 event dns_request(c: connection, msg: dns_msg, query: string, qtype: count, qclass: count)
 	{
-	NetworkStats::topk_observation("dns", DNS::query_types[qtype], query);
+	NetworkStats::topk_observation("dns-queries", DNS::query_types[qtype], query);
 	}
 ```
 
-The resulting log-file is called `topk-dns.log` and looks like this (using a short test trace):
+The resulting log-file is called `topk-dns-queries.log` and looks like this (using a short test trace):
 
 ```
-#path	topk-dns
+#path	topk-dns-queries
 #fields	ts	duration	key	values	counts	epsilons
 #types	time	interval	string	vector[string]	vector[count]	vector[count]
 1300475173.475401	300.000000	AAAA	upload.wikimedia.org,upload.wikimedia.org.ncsa.uiuc.edu,meta.wikimedia.org	4,4,1	0,0,0
@@ -50,9 +50,9 @@ After installation, the scripts that are part of this repository will, by defaul
 
 If you are only interested in creating your own measurements, you can prevent these scripts from being loaded by putting `const NS_NO_MEASUREMENTS = T;` into your `local.zeek` before the `@load packages` line.
 
-### `topk-dns.log`
+### `topk-dns-queries.log`
 
-The log file `topk-dns.log` contains the top-100 DNS queries for each DNS query-type. 
+The log file `topk-dns-queries.log` contains the top-100 DNS queries for each DNS query-type.
 
 ### `topk-http-hosts.log`
 

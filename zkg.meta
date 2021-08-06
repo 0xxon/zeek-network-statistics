@@ -2,4 +2,5 @@
 description = Perform regular network measurements and report results.
 tags = topk, sumstats
 script_dir = scripts
+test_command = cd tests && make
 version = main
