@@ -140,8 +140,11 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 
 	local make_epoch_result = function(pass_name: string, pass_intv: interval, pass_settings: TopKSettings): function(ts: time, key: SumStats::Key, result: SumStats::Result)
 		{
-		return function [pass_name, pass_intv, pass_settings] (ts: time, key: SumStats::Key, result: SumStats::Result)
-			{
+@if ( Version::at_least("4.1") )
+		return function [pass_name, pass_intv, pass_settings] (ts: time, key: SumStats::Key, result: SumStats::Result) {
+@else
+		return function (ts: time, key: SumStats::Key, result: SumStats::Result) {
+@endif
 			local r = result[fmt("ns-%s-%s", pass_name, pass_intv)];
 			local s: vector of SumStats::Observation;
 			s = topk_get_top(r$topk, pass_settings$top);
@@ -175,8 +178,11 @@ function create_topk_measurement(name: string, settings: TopKSettings &default=[
 
 	local make_path_func = function(pass_path_name: string): function(id: Log::ID, path: string, rec: TopKInfo): string
 		{
-		return function [pass_path_name] (id: Log::ID, path: string, rec: TopKInfo): string
-			{
+@if ( Version::at_least("4.1") )
+		return function [pass_path_name] (id: Log::ID, path: string, rec: TopKInfo): string {
+@else
+		return function (id: Log::ID, path: string, rec: TopKInfo): string {
+@endif
 			return fmt("%s-%s", pass_path_name, subst_string(cat(rec$duration), " ", ""));
 			};
 		};
